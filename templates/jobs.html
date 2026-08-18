@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tìm Việc Làm Data Engineer - Vietnam DE Job Market</title>
+  <meta name="description" content="Tìm kiếm và lọc cơ hội việc làm Data Engineer theo địa điểm, mức lương, kinh nghiệm và kỹ năng.">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/jobs.css">
+</head>
+<body>
+
+  <!-- Mobile Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <div class="sidebar-logo-icon">📊</div>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Vietnam DE Market</span>
+            <span class="sidebar-logo-subtitle">Phase 1 MVP</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menu Chính</div>
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="/jobs" class="nav-item active" id="nav-jobs">
+          <span class="nav-icon">💼</span>
+          <span>Tìm việc làm</span>
+        </a>
+        
+        <div class="nav-label">Phân Tích Dữ Liệu</div>
+        <a href="/salary" class="nav-item" id="nav-salary">
+          <span class="nav-icon">💰</span>
+          <span>Phân tích Lương</span>
+        </a>
+        <a href="/skills" class="nav-item" id="nav-skills">
+          <span class="nav-icon">⚡</span>
+          <span>Kỹ năng Yêu cầu</span>
+        </a>
+        <a href="/locations" class="nav-item" id="nav-locations">
+          <span class="nav-icon">📍</span>
+          <span>Địa điểm Tuyển dụng</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="version-badge">Phase 1 MVP</div>
+        <div style="margin-top: 6px; font-size: 0.7rem; color: var(--color-text-muted);">
+          Dataset: Pandas & Flask
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Mobile Topbar -->
+      <header class="mobile-topbar">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open Menu">☰</button>
+          <span class="font-bold text-sm">Tìm việc Data Engineer</span>
+        </div>
+        <span class="badge badge-primary">Jobs</span>
+      </header>
+
+      <!-- Desktop Topbar -->
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">Tìm Kiếm Việc Làm Data Engineer</h1>
+          <p class="topbar-subtitle">Khám phá cơ hội nghề nghiệp phù hợp với kỹ năng của bạn</p>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Search & Filter Bar -->
+        <div class="card" style="margin-bottom: var(--space-6);">
+          <form id="searchForm">
+            <div class="search-bar">
+              <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input 
+                  type="text" 
+                  id="searchInput" 
+                  class="form-control" 
+                  placeholder="Tìm theo chức danh, công ty, kỹ năng (vd: Python, Spark, Airflow...)"
+                  autocomplete="off"
+                >
+              </div>
+              <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+            </div>
+
+            <div class="filters-row">
+              <div class="filter-group">
+                <label for="locationFilter" class="filter-label">Địa Điểm</label>
+                <select id="locationFilter" class="form-control">
+                  <option value="">Tất cả địa điểm</option>
+                  <option value="Ho Chi Minh City">TP. Hồ Chí Minh</option>
+                  <option value="Hanoi">Hà Nội</option>
+                  <option value="Da Nang">Đà Nẵng</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="expFilter" class="filter-label">Kinh Nghiệm</label>
+                <select id="expFilter" class="form-control">
+                  <option value="">Tất cả kinh nghiệm</option>
+                  <option value="junior">Junior (≤ 2 năm)</option>
+                  <option value="mid">Mid-Level (2 - 5 năm)</option>
+                  <option value="senior">Senior (> 5 năm)</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="remoteFilter" class="filter-label">Hình Thức</label>
+                <select id="remoteFilter" class="form-control">
+                  <option value="">Tất cả hình thức</option>
+                  <option value="true">Remote / Làm từ xa</option>
+                  <option value="false">On-site / Văn phòng</option>
+                </select>
+              </div>
+
+              <div class="filter-group" style="justify-content: flex-end;">
+                <label class="filter-label" style="opacity: 0;">Reset</label>
+                <button type="button" id="resetBtn" class="btn btn-outline">↺ Xóa bộ lọc</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Results Header -->
+        <div class="results-header">
+          <div class="results-count" id="resultsCount">
+            Đang tải dữ liệu việc làm...
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="jobsLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Đang tìm kiếm cơ hội việc làm phù hợp...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="jobsEmpty" class="state-box" style="display: none;">
+          <div class="state-icon">🔍</div>
+          <div class="state-title">Không tìm thấy việc làm phù hợp</div>
+          <div class="state-desc">Hãy thử thay đổi từ khóa hoặc xóa bớt các bộ lọc để có nhiều kết quả hơn.</div>
+        </div>
+
+        <!-- Error State -->
+        <div id="jobsError" class="state-box" style="display: none;">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Lỗi tải dữ liệu</div>
+          <div class="state-desc">Không thể kết nối đến máy chủ. Vui lòng thử lại sau.</div>
+        </div>
+
+        <!-- Jobs List Container -->
+        <div id="jobsList" class="jobs-list" style="display: none;">
+          <!-- Injected via jobs.js -->
+        </div>
+
+        <!-- Pagination -->
+        <div id="jobsPagination" class="pagination">
+          <!-- Injected via jobs.js -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/jobs.js"></script>
+</body>
+</html>

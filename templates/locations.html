@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phân Tích Địa Điểm Tuyển Dụng - Vietnam DE Job Market</title>
+  <meta name="description" content="Phân tích phân bố địa lý việc làm Data Engineer tại TP.HCM, Hà Nội, Đà Nẵng và so sánh đãi ngộ.">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/analytics.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Mobile Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <div class="sidebar-logo-icon">📊</div>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Vietnam DE Market</span>
+            <span class="sidebar-logo-subtitle">Phase 1 MVP</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menu Chính</div>
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="/jobs" class="nav-item" id="nav-jobs">
+          <span class="nav-icon">💼</span>
+          <span>Tìm việc làm</span>
+        </a>
+        
+        <div class="nav-label">Phân Tích Dữ Liệu</div>
+        <a href="/salary" class="nav-item" id="nav-salary">
+          <span class="nav-icon">💰</span>
+          <span>Phân tích Lương</span>
+        </a>
+        <a href="/skills" class="nav-item" id="nav-skills">
+          <span class="nav-icon">⚡</span>
+          <span>Kỹ năng Yêu cầu</span>
+        </a>
+        <a href="/locations" class="nav-item active" id="nav-locations">
+          <span class="nav-icon">📍</span>
+          <span>Địa điểm Tuyển dụng</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="version-badge">Phase 1 MVP</div>
+        <div style="margin-top: 6px; font-size: 0.7rem; color: var(--color-text-muted);">
+          Dataset: Pandas & Flask
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Mobile Topbar -->
+      <header class="mobile-topbar">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open Menu">☰</button>
+          <span class="font-bold text-sm">Địa điểm Tuyển dụng</span>
+        </div>
+        <span class="badge badge-info">Locations</span>
+      </header>
+
+      <!-- Desktop Topbar -->
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">Phân Tích Thị Trường Tuyển Dụng Theo Khu Vực</h1>
+          <p class="topbar-subtitle">So sánh số lượng việc làm, tỷ trọng và thu nhập giữa các trung tâm công nghệ</p>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Loading State -->
+        <div id="locationsLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu phân bố địa lý...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="locationsError" class="state-box" style="display: none;">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Lỗi tải dữ liệu</div>
+          <div class="state-desc">Không thể tải dữ liệu phân tích địa điểm. Vui lòng thử lại sau.</div>
+        </div>
+
+        <!-- Locations Content -->
+        <div id="locationsContent" style="display: none;">
+          <!-- 4 KPI Cards -->
+          <div class="analytics-kpi-grid">
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-primary);">
+              <span class="analytics-kpi-label">Thị Trường Lớn Nhất</span>
+              <span class="analytics-kpi-val" id="kpiTopLocation">-</span>
+              <span class="analytics-kpi-sub">Thành phố có nhiều việc làm nhất</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-accent);">
+              <span class="analytics-kpi-label">TP. Hồ Chí Minh</span>
+              <span class="analytics-kpi-val" id="kpiHcmShare">-</span>
+              <span class="analytics-kpi-sub">Tỷ trọng toàn quốc</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-secondary);">
+              <span class="analytics-kpi-label">Hà Nội</span>
+              <span class="analytics-kpi-val" id="kpiHnShare">-</span>
+              <span class="analytics-kpi-sub">Tỷ trọng toàn quốc</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-success);">
+              <span class="analytics-kpi-label">Khu Vực Ghi Nhận</span>
+              <span class="analytics-kpi-val" id="kpiTotalCities">-</span>
+              <span class="analytics-kpi-sub">Trung tâm việc làm trên cả nước</span>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="analytics-grid-2">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Số Lượng Việc Làm Theo Khu Vực</h2>
+                  <p class="chart-card-desc">Quy mô thị trường tuyển dụng Data Engineer</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="locJobCountChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Mức Lương Trung Bình Theo Khu Vực</h2>
+                  <p class="chart-card-desc">So sánh mức lương trung bình (Triệu VNĐ/tháng)</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="locSalaryChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location Table Section -->
+          <div class="chart-card" style="margin-top: var(--space-6);">
+            <div class="chart-card-header">
+              <div>
+                <h2 class="chart-card-title">Bảng Thống Kê Chi Tiết Theo Khu Vực</h2>
+                <p class="chart-card-desc">Báo cáo so sánh toàn diện về số lượng và mức thu nhập</p>
+              </div>
+              <span class="badge badge-info">Báo cáo khu vực</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Khu Vực / Thành Phố</th>
+                    <th>Số Việc Làm</th>
+                    <th>Tỷ Trọng (%)</th>
+                    <th>Lương Trung Bình</th>
+                    <th>Lương Trung Vị</th>
+                  </tr>
+                </thead>
+                <tbody id="locationTableBody">
+                  <!-- Injected via locations.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/locations.js"></script>
+</body>
+</html>

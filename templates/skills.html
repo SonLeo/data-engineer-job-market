@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phân Tích Kỹ Năng Data Engineer - Vietnam DE Job Market</title>
+  <meta name="description" content="Khám phá các kỹ năng và công nghệ phổ biến nhất được yêu cầu cho Data Engineer tại Việt Nam.">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/analytics.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Mobile Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <div class="sidebar-logo-icon">📊</div>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Vietnam DE Market</span>
+            <span class="sidebar-logo-subtitle">Phase 1 MVP</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menu Chính</div>
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="/jobs" class="nav-item" id="nav-jobs">
+          <span class="nav-icon">💼</span>
+          <span>Tìm việc làm</span>
+        </a>
+        
+        <div class="nav-label">Phân Tích Dữ Liệu</div>
+        <a href="/salary" class="nav-item" id="nav-salary">
+          <span class="nav-icon">💰</span>
+          <span>Phân tích Lương</span>
+        </a>
+        <a href="/skills" class="nav-item active" id="nav-skills">
+          <span class="nav-icon">⚡</span>
+          <span>Kỹ năng Yêu cầu</span>
+        </a>
+        <a href="/locations" class="nav-item" id="nav-locations">
+          <span class="nav-icon">📍</span>
+          <span>Địa điểm Tuyển dụng</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="version-badge">Phase 1 MVP</div>
+        <div style="margin-top: 6px; font-size: 0.7rem; color: var(--color-text-muted);">
+          Dataset: Pandas & Flask
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Mobile Topbar -->
+      <header class="mobile-topbar">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open Menu">☰</button>
+          <span class="font-bold text-sm">Kỹ năng Yêu cầu</span>
+        </div>
+        <span class="badge badge-accent">Skills</span>
+      </header>
+
+      <!-- Desktop Topbar -->
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">Phân Tích Nhu Cầu Kỹ Năng & Công Nghệ</h1>
+          <p class="topbar-subtitle">Đánh giá các công nghệ cốt lõi và cặp kỹ năng được săn đón nhất</p>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Loading State -->
+        <div id="skillsLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Đang phân tích dữ liệu kỹ năng...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="skillsError" class="state-box" style="display: none;">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Lỗi tải dữ liệu</div>
+          <div class="state-desc">Không thể tải số liệu kỹ năng từ API backend.</div>
+        </div>
+
+        <!-- Skills Content -->
+        <div id="skillsContent" style="display: none;">
+          <!-- 4 KPI Cards -->
+          <div class="analytics-kpi-grid">
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-primary);">
+              <span class="analytics-kpi-label">Top #1 Kỹ Năng</span>
+              <span class="analytics-kpi-val" id="kpiSkill1">-</span>
+              <span class="analytics-kpi-sub">Kỹ năng cốt lõi bắt buộc</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-accent);">
+              <span class="analytics-kpi-label">Top #2 Kỹ Năng</span>
+              <span class="analytics-kpi-val" id="kpiSkill2">-</span>
+              <span class="analytics-kpi-sub">Ngôn ngữ / công cụ phổ biến #2</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-secondary);">
+              <span class="analytics-kpi-label">Top #3 Kỹ Năng</span>
+              <span class="analytics-kpi-val" id="kpiSkill3">-</span>
+              <span class="analytics-kpi-sub">Nền tảng / framework phổ biến #3</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-success);">
+              <span class="analytics-kpi-label">Tổng Số Kỹ Năng</span>
+              <span class="analytics-kpi-val" id="kpiTotalSkills">-</span>
+              <span class="analytics-kpi-sub">Công nghệ được ghi nhận trong dataset</span>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="analytics-grid-2">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Tần Suất Kỹ Năng (Top 12)</h2>
+                  <p class="chart-card-desc">Số lượng tin tuyển dụng yêu cầu mỗi kỹ năng</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="topSkillsBarChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Thị Phần Top 6 Kỹ Năng</h2>
+                  <p class="chart-card-desc">Tỷ lệ xuất hiện trên tổng số tin tuyển dụng (%)</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="skillsShareChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Skill Combinations Section -->
+          <div class="chart-card" style="margin-top: var(--space-6);">
+            <div class="chart-card-header">
+              <div>
+                <h2 class="chart-card-title">Cặp Kỹ Năng Thường Được Yêu Cầu Cùng Nhau</h2>
+                <p class="chart-card-desc">Tổ hợp công nghệ xuất hiện đồng thời trong cùng một JD</p>
+              </div>
+              <span class="badge badge-primary">Skill Combos</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">Thứ Hạng</th>
+                    <th>Tổ Hợp Kỹ Năng</th>
+                    <th>Số Tin Yêu Cầu</th>
+                    <th>Tỷ Lệ Thị Trường (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="skillCombinationsBody">
+                  <!-- Injected via skills.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/skills.js"></script>
+</body>
+</html>

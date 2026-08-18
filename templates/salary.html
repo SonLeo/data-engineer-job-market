@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phân Tích Mức Lương Data Engineer - Vietnam DE Job Market</title>
+  <meta name="description" content="Phân tích chi tiết mức lương Data Engineer tại Việt Nam theo kinh nghiệm, địa điểm và kỹ năng.">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/analytics.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Mobile Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <div class="sidebar-logo-icon">📊</div>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Vietnam DE Market</span>
+            <span class="sidebar-logo-subtitle">Phase 1 MVP</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menu Chính</div>
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="/jobs" class="nav-item" id="nav-jobs">
+          <span class="nav-icon">💼</span>
+          <span>Tìm việc làm</span>
+        </a>
+        
+        <div class="nav-label">Phân Tích Dữ Liệu</div>
+        <a href="/salary" class="nav-item active" id="nav-salary">
+          <span class="nav-icon">💰</span>
+          <span>Phân tích Lương</span>
+        </a>
+        <a href="/skills" class="nav-item" id="nav-skills">
+          <span class="nav-icon">⚡</span>
+          <span>Kỹ năng Yêu cầu</span>
+        </a>
+        <a href="/locations" class="nav-item" id="nav-locations">
+          <span class="nav-icon">📍</span>
+          <span>Địa điểm Tuyển dụng</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="version-badge">Phase 1 MVP</div>
+        <div style="margin-top: 6px; font-size: 0.7rem; color: var(--color-text-muted);">
+          Dataset: Pandas & Flask
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Mobile Topbar -->
+      <header class="mobile-topbar">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open Menu">☰</button>
+          <span class="font-bold text-sm">Phân tích Lương</span>
+        </div>
+        <span class="badge badge-success">Salary</span>
+      </header>
+
+      <!-- Desktop Topbar -->
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">Phân Tích Mức Lương Data Engineer</h1>
+          <p class="topbar-subtitle">Thống kê đãi ngộ theo năm kinh nghiệm, khu vực và bộ kỹ năng</p>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Loading State -->
+        <div id="salaryLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Đang tổng hợp dữ liệu mức lương...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="salaryError" class="state-box" style="display: none;">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Lỗi tải dữ liệu</div>
+          <div class="state-desc">Không thể tính toán số liệu lương từ dataset. Vui lòng thử lại.</div>
+        </div>
+
+        <!-- Salary Content -->
+        <div id="salaryContent" style="display: none;">
+          <!-- 4 KPI Cards -->
+          <div class="analytics-kpi-grid">
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-primary);">
+              <span class="analytics-kpi-label">Lương Trung Bình</span>
+              <span class="analytics-kpi-val" id="kpiSalaryAvg">-</span>
+              <span class="analytics-kpi-sub">Mean monthly salary</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-success);">
+              <span class="analytics-kpi-label">Lương Trung Vị</span>
+              <span class="analytics-kpi-val" id="kpiSalaryMed">-</span>
+              <span class="analytics-kpi-sub">Median monthly salary</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-warning);">
+              <span class="analytics-kpi-label">Mức Cao Nhất</span>
+              <span class="analytics-kpi-val" id="kpiSalaryMax">-</span>
+              <span class="analytics-kpi-sub">Senior / Lead positions</span>
+            </div>
+
+            <div class="analytics-kpi-card" style="--kpi-accent: var(--color-info);">
+              <span class="analytics-kpi-label">Mức Khởi Điểm</span>
+              <span class="analytics-kpi-val" id="kpiSalaryMin">-</span>
+              <span class="analytics-kpi-sub">Fresher / Junior minimum</span>
+            </div>
+          </div>
+
+          <!-- Charts Row 1 -->
+          <div class="analytics-grid-2">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Phổ Phân Bố Mức Lương (VND)</h2>
+                  <p class="chart-card-desc">Số lượng tin tuyển dụng theo các dải thu nhập</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="salaryDistChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Mức Lương Theo Kinh Nghiệm</h2>
+                  <p class="chart-card-desc">Thu nhập trung bình (Triệu VNĐ/tháng)</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="salaryExpChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 2 -->
+          <div class="analytics-grid-2">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Mức Lương Theo Khu Vực</h2>
+                  <p class="chart-card-desc">So sánh thu nhập giữa các thành phố lớn</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="salaryLocChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h2 class="chart-card-title">Top Kỹ Năng Được Trả Lương Cao</h2>
+                  <p class="chart-card-desc">Mức lương trung bình gắn liền với công nghệ</p>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="salarySkillChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/salary.js"></script>
+</body>
+</html>

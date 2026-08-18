@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Vietnam Data Engineer Job Market</title>
+  <meta name="description" content="Phân tích tổng quan thị trường việc làm Data Engineer tại Việt Nam.">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Mobile Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <div class="sidebar-logo-icon">📊</div>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Vietnam DE Market</span>
+            <span class="sidebar-logo-subtitle">Phase 1 MVP</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menu Chính</div>
+        <a href="/" class="nav-item active" id="nav-dashboard">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="/jobs" class="nav-item" id="nav-jobs">
+          <span class="nav-icon">💼</span>
+          <span>Tìm việc làm</span>
+        </a>
+        
+        <div class="nav-label">Phân Tích Dữ Liệu</div>
+        <a href="/salary" class="nav-item" id="nav-salary">
+          <span class="nav-icon">💰</span>
+          <span>Phân tích Lương</span>
+        </a>
+        <a href="/skills" class="nav-item" id="nav-skills">
+          <span class="nav-icon">⚡</span>
+          <span>Kỹ năng Yêu cầu</span>
+        </a>
+        <a href="/locations" class="nav-item" id="nav-locations">
+          <span class="nav-icon">📍</span>
+          <span>Địa điểm Tuyển dụng</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="version-badge">Phase 1 MVP</div>
+        <div style="margin-top: 6px; font-size: 0.7rem; color: var(--color-text-muted);">
+          Dataset: Pandas & Flask
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Mobile Topbar -->
+      <header class="mobile-topbar">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open Menu">☰</button>
+          <span class="font-bold text-sm">Vietnam DE Market</span>
+        </div>
+        <span class="badge badge-primary">MVP</span>
+      </header>
+
+      <!-- Desktop Topbar -->
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">Tổng quan Thị trường Data Engineer</h1>
+          <p class="topbar-subtitle">Cập nhật số liệu tuyển dụng thực tế tại Việt Nam</p>
+        </div>
+        <div class="topbar-actions">
+          <a href="/jobs" class="btn btn-primary btn-sm">Tìm việc ngay →</a>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Loading State -->
+        <div id="dashboardLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu thị trường việc làm...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="dashboardError" class="state-box" style="display: none;">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Không thể tải dữ liệu</div>
+          <div class="state-desc">Vui lòng kiểm tra kết nối hoặc API backend.</div>
+          <button onclick="location.reload()" class="btn btn-outline btn-sm">Thử lại</button>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboardContent" style="display: none;">
+          <!-- KPI Cards Grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card" style="--kpi-color: var(--color-primary); --kpi-icon-bg: rgba(108, 142, 245, 0.15);">
+              <div class="kpi-icon">📋</div>
+              <div class="kpi-content">
+                <div class="kpi-label">Tổng Tin Tuyển Dụng</div>
+                <div class="kpi-value" id="kpiTotalJobs">-</div>
+                <div class="kpi-description">Vị trí Data Engineer đang mở</div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="--kpi-color: var(--color-secondary); --kpi-icon-bg: rgba(124, 92, 191, 0.15);">
+              <div class="kpi-icon">🏢</div>
+              <div class="kpi-content">
+                <div class="kpi-label">Doanh Nghiệp Tuyển</div>
+                <div class="kpi-value" id="kpiTotalCompanies">-</div>
+                <div class="kpi-description">Công ty công nghệ & tài chính</div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="--kpi-color: var(--color-success); --kpi-icon-bg: rgba(52, 211, 153, 0.15);">
+              <div class="kpi-icon">💵</div>
+              <div class="kpi-content">
+                <div class="kpi-label">Lương Trung Vị (Median)</div>
+                <div class="kpi-value" id="kpiMedianSalary">-</div>
+                <div class="kpi-description">Mức lương phổ biến nhất / tháng</div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="--kpi-color: var(--color-accent); --kpi-icon-bg: rgba(56, 189, 248, 0.15);">
+              <div class="kpi-icon">📈</div>
+              <div class="kpi-content">
+                <div class="kpi-label">Lương Trung Bình (Mean)</div>
+                <div class="kpi-value" id="kpiAverageSalary">-</div>
+                <div class="kpi-description">Tính trên toàn bộ thị trường</div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="--kpi-color: var(--color-warning); --kpi-icon-bg: rgba(251, 191, 36, 0.15);">
+              <div class="kpi-icon">🏆</div>
+              <div class="kpi-content">
+                <div class="kpi-label">Lương Cao Nhất</div>
+                <div class="kpi-value" id="kpiHighestSalary">-</div>
+                <div class="kpi-description">Vị trí Senior / Lead / Principal</div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="--kpi-color: var(--color-info); --kpi-icon-bg: rgba(96, 165, 250, 0.15);">
+              <div class="kpi-icon">🌐</div>
+              <div class="kpi-content">
+                <div class="kpi-label">Làm Việc Từ Xa (Remote)</div>
+                <div class="kpi-value" id="kpiRemoteJobs">-</div>
+                <div class="kpi-description">Tin tuyển dụng cho phép làm từ xa</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 1 -->
+          <div class="charts-grid">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Xu hướng Tuyển dụng</h2>
+                  <p class="card-subtitle">Số lượng tin đăng theo ngày</p>
+                </div>
+                <span class="badge badge-primary">30 ngày qua</span>
+              </div>
+              <div class="chart-canvas-wrapper" style="height: 260px;">
+                <canvas id="jobTrendChart"></canvas>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Top Kỹ năng Yêu cầu</h2>
+                  <p class="card-subtitle">Tỷ lệ phần trăm trong tin tuyển</p>
+                </div>
+                <a href="/skills" class="btn btn-ghost btn-sm">Xem tất cả →</a>
+              </div>
+              <div class="chart-canvas-wrapper" style="height: 260px;">
+                <canvas id="topSkillsChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row 2 -->
+          <div class="charts-grid">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Phân bố Mức lương (VNĐ)</h2>
+                  <p class="card-subtitle">Số lượng việc làm theo dải lương</p>
+                </div>
+                <a href="/salary" class="btn btn-ghost btn-sm">Chi tiết →</a>
+              </div>
+              <div class="chart-canvas-wrapper" style="height: 260px;">
+                <canvas id="salaryDistChart"></canvas>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Phân bố theo Địa điểm</h2>
+                  <p class="card-subtitle">Thị phần việc làm các thành phố</p>
+                </div>
+                <a href="/locations" class="btn btn-ghost btn-sm">Chi tiết →</a>
+              </div>
+              <div class="chart-canvas-wrapper" style="height: 260px;">
+                <canvas id="locationChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Latest Jobs Section -->
+          <div class="card latest-jobs-section">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Tin Tuyển Dụng Mới Nhất</h2>
+                <p class="card-subtitle">Cơ hội việc làm Data Engineer vừa được cập nhật</p>
+              </div>
+              <a href="/jobs" class="btn btn-outline btn-sm">Xem toàn bộ việc làm →</a>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="latest-jobs-table">
+                <thead>
+                  <tr>
+                    <th>Vị trí</th>
+                    <th>Công ty</th>
+                    <th>Địa điểm</th>
+                    <th>Mức lương</th>
+                    <th>Kỹ năng cốt lõi</th>
+                  </tr>
+                </thead>
+                <tbody id="latestJobsBody">
+                  <!-- Injected via dashboard.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
