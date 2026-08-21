@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="vi" class="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Dashboard - Vietnam Data Engineer Job Market</title>
   <meta name="description" content="Phân tích tổng quan thị trường việc làm Data Engineer tại Việt Nam.">
-  
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -37,11 +38,12 @@
 
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="/static/css/dashboard.css">
-  
+
   <!-- Chart.js & Chart.js DataLabels Plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
+
 <body class="bg-[#0f1117] text-slate-200 antialiased">
 
   <!-- Mobile Overlay -->
@@ -70,7 +72,7 @@
           <span class="nav-icon">💼</span>
           <span>Tìm việc làm</span>
         </a>
-        
+
         <div class="nav-label">Phân Tích Dữ Liệu</div>
         <a href="/salary" class="nav-item" id="nav-salary">
           <span class="nav-icon">💰</span>
@@ -139,54 +141,90 @@
             <div class="kpi-card" style="--kpi-color: var(--color-primary); --kpi-icon-bg: rgba(108, 142, 245, 0.15);">
               <div class="kpi-icon">📋</div>
               <div class="kpi-content">
-                <div class="kpi-label">Tổng Tin Tuyển Dụng</div>
+                <div class="kpi-header-row">
+                  <div class="kpi-label">Tổng Tin Tuyển Dụng</div>
+                  <span class="kpi-trend-badge" id="kpiTotalJobsGrowth">--</span>
+                </div>
                 <div class="kpi-value" id="kpiTotalJobs">-</div>
-                <div class="kpi-description">Vị trí Data Engineer đang mở</div>
+                <div class="kpi-footer">
+                  <span class="kpi-description">Vị trí Data Engineer đang mở</span>
+                  <span class="kpi-period-text">vs tháng trước</span>
+                </div>
               </div>
             </div>
 
             <div class="kpi-card" style="--kpi-color: var(--color-secondary); --kpi-icon-bg: rgba(124, 92, 191, 0.15);">
               <div class="kpi-icon">🏢</div>
               <div class="kpi-content">
-                <div class="kpi-label">Doanh Nghiệp Tuyển</div>
+                <div class="kpi-header-row">
+                  <div class="kpi-label">Doanh Nghiệp Tuyển</div>
+                  <span class="kpi-trend-badge" id="kpiTotalCompaniesGrowth">--</span>
+                </div>
                 <div class="kpi-value" id="kpiTotalCompanies">-</div>
-                <div class="kpi-description">Công ty công nghệ & tài chính</div>
+                <div class="kpi-footer">
+                  <span class="kpi-description">Công ty công nghệ & tài chính</span>
+                  <span class="kpi-period-text">vs tháng trước</span>
+                </div>
               </div>
             </div>
 
             <div class="kpi-card" style="--kpi-color: var(--color-success); --kpi-icon-bg: rgba(52, 211, 153, 0.15);">
               <div class="kpi-icon">💵</div>
               <div class="kpi-content">
-                <div class="kpi-label">Lương Trung Vị (Median)</div>
+                <div class="kpi-header-row">
+                  <div class="kpi-label">Lương Trung Vị (Median)</div>
+                  <span class="kpi-trend-badge" id="kpiMedianSalaryGrowth">--</span>
+                </div>
                 <div class="kpi-value" id="kpiMedianSalary">-</div>
-                <div class="kpi-description">Mức lương phổ biến nhất / tháng</div>
+                <div class="kpi-footer">
+                  <span class="kpi-description">Mức lương phổ biến nhất / tháng</span>
+                  <span class="kpi-period-text">vs tháng trước</span>
+                </div>
               </div>
             </div>
 
             <div class="kpi-card" style="--kpi-color: var(--color-accent); --kpi-icon-bg: rgba(56, 189, 248, 0.15);">
               <div class="kpi-icon">📈</div>
               <div class="kpi-content">
-                <div class="kpi-label">Lương Trung Bình (Mean)</div>
+                <div class="kpi-header-row">
+                  <div class="kpi-label">Lương Trung Bình (Mean)</div>
+                  <span class="kpi-trend-badge" id="kpiAverageSalaryGrowth">--</span>
+                </div>
                 <div class="kpi-value" id="kpiAverageSalary">-</div>
-                <div class="kpi-description">Tính trên toàn bộ thị trường</div>
+                <div class="kpi-footer">
+                  <span class="kpi-description">Tính trên toàn bộ thị trường</span>
+                  <span class="kpi-period-text">vs tháng trước</span>
+                </div>
               </div>
             </div>
 
             <div class="kpi-card" style="--kpi-color: var(--color-warning); --kpi-icon-bg: rgba(251, 191, 36, 0.15);">
               <div class="kpi-icon">🏆</div>
               <div class="kpi-content">
-                <div class="kpi-label">Lương Cao Nhất</div>
+                <div class="kpi-header-row">
+                  <div class="kpi-label">Lương Cao Nhất</div>
+                  <span class="kpi-trend-badge" id="kpiHighestSalaryGrowth">--</span>
+                </div>
                 <div class="kpi-value" id="kpiHighestSalary">-</div>
-                <div class="kpi-description">Vị trí Senior / Lead / Principal</div>
+                <div class="kpi-footer">
+                  <span class="kpi-description">Vị trí Senior / Lead / Principal</span>
+                  <span class="kpi-period-text">vs tháng trước</span>
+                </div>
               </div>
             </div>
 
             <div class="kpi-card" style="--kpi-color: var(--color-info); --kpi-icon-bg: rgba(96, 165, 250, 0.15);">
               <div class="kpi-icon">🌐</div>
               <div class="kpi-content">
-                <div class="kpi-label">Làm Việc Từ Xa (Remote)</div>
+                <div class="kpi-header-row">
+                  <div class="kpi-label">Làm Việc Từ Xa (Remote)</div>
+                  <span class="kpi-trend-badge" id="kpiRemoteJobsGrowth">--</span>
+                </div>
                 <div class="kpi-value" id="kpiRemoteJobs">-</div>
-                <div class="kpi-description">Tin tuyển dụng cho phép làm từ xa</div>
+                <div class="kpi-footer">
+                  <span class="kpi-description">Tin tuyển dụng cho phép từ xa</span>
+                  <span class="kpi-period-text">vs tháng trước</span>
+                </div>
               </div>
             </div>
           </div>
@@ -214,6 +252,37 @@
               </div>
             </div>
 
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Phân bố Mức lương (VNĐ)</h2>
+                  <p class="card-subtitle">Số lượng việc làm theo dải lương</p>
+                </div>
+                <a href="/salary" class="btn btn-ghost btn-sm">Chi tiết →</a>
+              </div>
+              <div class="chart-canvas-wrapper" style="height: 280px;">
+                <canvas id="salaryDistChart"></canvas>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Charts Row 2 -->
+          <div class="charts-grid">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Phân bố theo Địa điểm</h2>
+                  <p class="card-subtitle">Thị phần việc làm các thành phố</p>
+                </div>
+                <a href="/locations" class="btn btn-ghost btn-sm">Chi tiết →</a>
+              </div>
+              <div class="chart-canvas-wrapper" style="height: 280px;">
+                <canvas id="locationChart"></canvas>
+              </div>
+            </div>
+
+
             <!-- Top Skills Chart with Limit Filter -->
             <div class="card">
               <div class="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -234,35 +303,6 @@
               </div>
               <div class="chart-canvas-wrapper" style="height: 280px;">
                 <canvas id="topSkillsChart"></canvas>
-              </div>
-            </div>
-          </div>
-
-          <!-- Charts Row 2 -->
-          <div class="charts-grid">
-            <div class="card">
-              <div class="card-header">
-                <div>
-                  <h2 class="card-title">Phân bố Mức lương (VNĐ)</h2>
-                  <p class="card-subtitle">Số lượng việc làm theo dải lương</p>
-                </div>
-                <a href="/salary" class="btn btn-ghost btn-sm">Chi tiết →</a>
-              </div>
-              <div class="chart-canvas-wrapper" style="height: 280px;">
-                <canvas id="salaryDistChart"></canvas>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <div>
-                  <h2 class="card-title">Phân bố theo Địa điểm</h2>
-                  <p class="card-subtitle">Thị phần việc làm các thành phố</p>
-                </div>
-                <a href="/locations" class="btn btn-ghost btn-sm">Chi tiết →</a>
-              </div>
-              <div class="chart-canvas-wrapper" style="height: 280px;">
-                <canvas id="locationChart"></canvas>
               </div>
             </div>
           </div>
@@ -315,4 +355,5 @@
   <script src="/static/js/charts.js"></script>
   <script src="/static/js/dashboard.js"></script>
 </body>
+
 </html>

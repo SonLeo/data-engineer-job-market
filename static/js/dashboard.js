@@ -109,6 +109,40 @@ function renderKPIs(data) {
   if (highestSalaryEl) highestSalaryEl.textContent = formatCurrencyCompact(data.highest_salary);
   if (remoteJobsEl) remoteJobsEl.textContent = formatNumber(data.remote_jobs);
   if (newJobsEl) newJobsEl.textContent = formatNumber(data.new_jobs);
+
+  // Populate MoM Growth Badges
+  const growth = data.growth || {};
+  formatGrowthBadge(document.getElementById('kpiTotalJobsGrowth'), growth.total_jobs);
+  formatGrowthBadge(document.getElementById('kpiTotalCompaniesGrowth'), growth.total_companies);
+  formatGrowthBadge(document.getElementById('kpiMedianSalaryGrowth'), growth.median_salary);
+  formatGrowthBadge(document.getElementById('kpiAverageSalaryGrowth'), growth.average_salary);
+  formatGrowthBadge(document.getElementById('kpiHighestSalaryGrowth'), growth.highest_salary);
+  formatGrowthBadge(document.getElementById('kpiRemoteJobsGrowth'), growth.remote_jobs);
+}
+
+function formatGrowthBadge(el, growthVal) {
+  if (!el) return;
+  if (growthVal === null || growthVal === undefined || isNaN(growthVal)) {
+    el.innerHTML = `<span>→</span> 0.0%`;
+    el.className = 'kpi-trend-badge neutral';
+    el.title = 'Chưa có dữ liệu biến động so với kỳ trước';
+    return;
+  }
+
+  const num = Number(growthVal);
+  if (num > 0) {
+    el.innerHTML = `<span>↑</span> +${num.toFixed(1)}%`;
+    el.className = 'kpi-trend-badge positive';
+    el.title = `Tăng ${num.toFixed(1)}% so với tháng trước`;
+  } else if (num < 0) {
+    el.innerHTML = `<span>↓</span> ${num.toFixed(1)}%`;
+    el.className = 'kpi-trend-badge negative';
+    el.title = `Giảm ${Math.abs(num).toFixed(1)}% so với tháng trước`;
+  } else {
+    el.innerHTML = `<span>→</span> 0.0%`;
+    el.className = 'kpi-trend-badge neutral';
+    el.title = 'Không đổi so với tháng trước';
+  }
 }
 
 function renderJobTrendChart(trendData) {

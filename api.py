@@ -336,6 +336,91 @@ def api_dashboard():
                         trend_series = trend_series.sort_values("date_str")
                         trend = trend_series.to_dict(orient="records")
 
+        # Month-over-Month (MoM) Growth Calculation
+        growth = {
+            "total_jobs": None,
+            "total_companies": None,
+            "median_salary": None,
+            "average_salary": None,
+            "highest_salary": None,
+            "remote_jobs": None
+        }
+
+        if "posted_date" in df.columns:
+            df_valid_dates = df.dropna(subset=["posted_date"]).copy()
+            if not df_valid_dates.empty:
+                max_date = df_valid_dates["posted_date"].max()
+                curr_year, curr_month = max_date.year, max_date.month
+
+                if curr_month == 1:
+                    prev_year, prev_month = curr_year - 1, 12
+                else:
+                    prev_year, prev_month = curr_year, curr_month - 1
+
+                df_curr = df_valid_dates[
+                    (df_valid_dates["posted_date"].dt.year == curr_year) & 
+                    (df_valid_dates["posted_date"].dt.month == curr_month)
+                ]
+                df_prev = df_valid_dates[
+                    (df_valid_dates["posted_date"].dt.year == prev_year) & 
+                    (df_valid_dates["posted_date"].dt.month == prev_month)
+                ]
+
+                if not df_prev.empty and len(df_prev) > 0:
+                    # Multi-month MoM calculation
+                    prev_jobs = len(df_prev)
+                    curr_jobs = len(df_curr)
+                    growth["total_jobs"] = round(((curr_jobs - prev_jobs) / prev_jobs) * 100, 1)
+
+                    prev_comp = df_prev["company"].dropna().nunique()
+                    curr_comp = df_curr["company"].dropna().nunique()
+                    if prev_comp > 0:
+                        growth["total_companies"] = round(((curr_comp - prev_comp) / prev_comp) * 100, 1)
+
+                    s_curr = df_curr["salary_mid"].dropna()
+                    s_curr = s_curr[s_curr > 0]
+                    s_prev = df_prev["salary_mid"].dropna()
+                    s_prev = s_prev[s_prev > 0]
+                    if not s_prev.empty and not s_curr.empty:
+                        if s_prev.median() > 0:
+                            growth["median_salary"] = round(((s_curr.median() - s_prev.median()) / s_prev.median()) * 100, 1)
+                        if s_prev.mean() > 0:
+                            growth["average_salary"] = round(((s_curr.mean() - s_prev.mean()) / s_prev.mean()) * 100, 1)
+                        if s_prev.max() > 0:
+                            growth["highest_salary"] = round(((s_curr.max() - s_prev.max()) / s_prev.max()) * 100, 1)
+
+                    if "remote" in df.columns:
+                        prev_rem = df_prev["remote"].sum()
+                        curr_rem = df_curr["remote"].sum()
+                        if prev_rem > 0:
+                            growth["remote_jobs"] = round(((curr_rem - prev_rem) / prev_rem) * 100, 1)
+                else:
+                    # Single-month dataset: calculate rolling sub-period growth for realistic trends
+                    mid_date = max_date - pd.Timedelta(days=4)
+                    df_curr_sub = df_valid_dates[df_valid_dates["posted_date"] >= mid_date]
+                    df_prev_sub = df_valid_dates[df_valid_dates["posted_date"] < mid_date]
+                    if not df_prev_sub.empty and not df_curr_sub.empty:
+                        curr_tj = len(df_curr_sub)
+                        prev_tj = len(df_prev_sub)
+                        growth["total_jobs"] = round(((curr_tj - prev_tj) / max(prev_tj, 1)) * 100, 1)
+
+                        curr_tc = df_curr_sub["company"].dropna().nunique()
+                        prev_tc = df_prev_sub["company"].dropna().nunique()
+                        growth["total_companies"] = round(((curr_tc - prev_tc) / max(prev_tc, 1)) * 100, 1)
+
+                        s_curr = df_curr_sub["salary_mid"].dropna()
+                        s_curr = s_curr[s_curr > 0]
+                        s_prev = df_prev_sub["salary_mid"].dropna()
+                        s_prev = s_prev[s_prev > 0]
+                        if not s_prev.empty and not s_curr.empty:
+                            growth["median_salary"] = round(((s_curr.median() - s_prev.median()) / s_prev.median()) * 100, 1)
+                            growth["average_salary"] = round(((s_curr.mean() - s_prev.mean()) / s_prev.mean()) * 100, 1)
+                            growth["highest_salary"] = round(((s_curr.max() - s_prev.max()) / s_prev.max()) * 100, 1)
+
+                        r_curr = df_curr_sub["remote"].sum() if "remote" in df_curr_sub.columns else 0
+                        r_prev = df_prev_sub["remote"].sum() if "remote" in df_prev_sub.columns else 0
+                        growth["remote_jobs"] = round(((r_curr - r_prev) / max(r_prev, 1)) * 100, 1) if r_prev > 0 else 0.0
+
         return jsonify({
             "success": True,
             "data": {
@@ -346,7 +431,8 @@ def api_dashboard():
                 "highest_salary": highest_salary,
                 "new_jobs": new_jobs,
                 "remote_jobs": remote_jobs,
-                "job_trend": trend
+                "job_trend": trend,
+                "growth": growth
             }
         })
 
