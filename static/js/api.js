@@ -32,8 +32,9 @@ async function apiRequest(endpoint, params = {}) {
 
 // ── API Methods ──
 
-async function fetchDashboard() {
-  const res = await apiRequest('/dashboard');
+async function fetchDashboard(params = {}) {
+  const queryParams = typeof params === 'string' ? { trend_range: params } : params;
+  const res = await apiRequest('/dashboard', queryParams);
   return res.data || res;
 }
 
@@ -130,24 +131,43 @@ function formatExperience(min, max) {
 }
 
 /**
- * Mobile Navigation Toggle Helper
+ * Mobile Navigation Toggle Helper with Body Scroll Lock
  */
 document.addEventListener('DOMContentLoaded', () => {
   const toggleBtn = document.getElementById('mobileMenuToggle');
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
 
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add('open');
+    if (overlay) overlay.classList.add('active');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+    document.body.classList.remove('overflow-hidden');
+  }
+
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('open');
-      if (overlay) overlay.classList.toggle('active');
+      if (sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
     });
   }
 
-  if (overlay && sidebar) {
-    overlay.addEventListener('click', () => {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('active');
-    });
+  if (overlay) {
+    overlay.addEventListener('click', closeSidebar);
   }
+
+  // Close sidebar on ESC key or route navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar && sidebar.classList.contains('open')) {
+      closeSidebar();
+    }
+  });
 });

@@ -3,9 +3,29 @@
  * Vietnam Data Engineer Job Market
  */
 
+let cachedSalarySkills = [];
+let currentSalarySkillLimit = 10;
+
 document.addEventListener('DOMContentLoaded', async () => {
+  setupSalarySkillFilters();
   await loadSalaryAnalytics();
 });
+
+function setupSalarySkillFilters() {
+  const filterBtns = document.querySelectorAll('.salary-skill-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const limit = btn.getAttribute('data-limit');
+      currentSalarySkillLimit = limit === 'all' ? 30 : parseInt(limit, 10);
+
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      renderSalaryBySkillChart(cachedSalarySkills, currentSalarySkillLimit);
+    });
+  });
+}
 
 async function loadSalaryAnalytics() {
   const loadingEl = document.getElementById('salaryLoading');
@@ -18,11 +38,13 @@ async function loadSalaryAnalytics() {
     if (loadingEl) loadingEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';
 
+    cachedSalarySkills = data.by_skill || [];
+
     renderSalaryKPIs(data.overview);
     renderSalaryDistChart(data.distribution);
     renderSalaryByExperienceChart(data.by_experience);
     renderSalaryByLocationChart(data.by_location);
-    renderSalaryBySkillChart(data.by_skill);
+    renderSalaryBySkillChart(cachedSalarySkills, currentSalarySkillLimit);
 
   } catch (err) {
     console.error('Error loading salary analytics:', err);
@@ -52,7 +74,8 @@ function renderSalaryDistChart(dist) {
   createBarChart('salaryDistChart', labels, data, {
     datasetLabel: 'Số lượng việc làm',
     backgroundColor: '#6c8ef5',
-    tooltipCallback: (ctx) => ` ${ctx.raw} việc làm`
+    tooltipCallback: (ctx) => ` ${ctx.raw} việc làm`,
+    dataLabelFormatter: (val) => val > 0 ? `${val}` : ''
   });
 }
 
@@ -64,7 +87,8 @@ function renderSalaryByExperienceChart(expData) {
   createBarChart('salaryExpChart', labels, data, {
     datasetLabel: 'Lương trung bình (Triệu ₫)',
     backgroundColor: '#38bdf8',
-    tooltipCallback: (ctx) => ` Trung bình: ${ctx.raw}M ₫/tháng`
+    tooltipCallback: (ctx) => ` Trung bình: ${ctx.raw}M ₫/tháng (${expData[ctx.dataIndex]?.count || 0} tin)`,
+    dataLabelFormatter: (val) => val > 0 ? `${val}M` : ''
   });
 }
 
@@ -76,13 +100,14 @@ function renderSalaryByLocationChart(locData) {
   createBarChart('salaryLocChart', labels, data, {
     datasetLabel: 'Lương trung bình (Triệu ₫)',
     backgroundColor: '#34d399',
-    tooltipCallback: (ctx) => ` Trung bình: ${ctx.raw}M ₫/tháng`
+    tooltipCallback: (ctx) => ` Trung bình: ${ctx.raw}M ₫/tháng (${locData[ctx.dataIndex]?.count || 0} tin)`,
+    dataLabelFormatter: (val) => val > 0 ? `${val}M` : ''
   });
 }
 
-function renderSalaryBySkillChart(skillData) {
+function renderSalaryBySkillChart(skillData, limit = 10) {
   if (!skillData || skillData.length === 0) return;
-  const topSkills = skillData.slice(0, 10);
+  const topSkills = skillData.slice(0, limit);
   const labels = topSkills.map(s => s.skill);
   const data = topSkills.map(s => Math.round((s.average_salary || 0) / 1e6));
 
@@ -90,6 +115,7 @@ function renderSalaryBySkillChart(skillData) {
     datasetLabel: 'Lương trung bình (Triệu ₫)',
     horizontal: true,
     backgroundColor: '#a78bfa',
-    tooltipCallback: (ctx) => ` Trung bình: ${ctx.raw}M ₫/tháng`
+    tooltipCallback: (ctx) => ` Trung bình: ${ctx.raw}M ₫/tháng (${topSkills[ctx.dataIndex]?.count || 0} tin)`,
+    dataLabelFormatter: (val) => `${val}M`
   });
 }

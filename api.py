@@ -5,10 +5,16 @@ Flask API with Pandas data processing
 
 from pathlib import Path
 from datetime import datetime, timedelta
+import logging
 
 import pandas as pd
 import numpy as np
 from flask import Flask, jsonify, request, render_template
+
+import db
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────
 # App Setup
@@ -23,16 +29,36 @@ DATA_PATH = BASE_DIR / "data" / "jobs.csv"
 # Data Loading & Cleaning
 # ─────────────────────────────────────────────────────────
 
-def load_data():
-    """Load CSV data with Pandas."""
-    if not DATA_PATH.exists():
-        return pd.DataFrame()
-    try:
-        df = pd.read_csv(DATA_PATH, dtype={"job_id": str})
-        return df
-    except Exception as e:
-        print(f"[ERROR] Failed to load data: {e}")
-        return pd.DataFrame()
+def load_data(prefer_db: bool = True) -> pd.DataFrame:
+    """
+    Load jobs data directly from IBM DB2 cloud database.
+    Falls back to local CSV only if DB2 connection is unreachable.
+    """
+    if prefer_db:
+        try:
+            print("\n[DB2] Connecting to IBM Db2 Cloud to fetch jobs dataset...")
+            df = db.fetch_jobs_dataframe()
+            if not df.empty:
+                print(f"[DB2] SUCCESS: Loaded {len(df)} jobs directly from IBM Db2 Cloud.")
+                app.config["DATA_SOURCE"] = "IBM DB2 Cloud"
+                return df
+            else:
+                print("[DB2] WARNING: IBM DB2 returned 0 records. Falling back to local CSV.")
+        except Exception as e:
+            print(f"[DB2] ERROR: Could not query IBM DB2 ({e}). Falling back to local CSV.")
+
+    # Fallback: Load CSV data with Pandas
+    if DATA_PATH.exists():
+        try:
+            df = pd.read_csv(DATA_PATH, dtype={"job_id": str})
+            print(f"[CSV FALLBACK] Loaded {len(df)} jobs from local CSV ({DATA_PATH}).")
+            app.config["DATA_SOURCE"] = "Local CSV (Fallback)"
+            return df
+        except Exception as e:
+            print(f"[CSV ERROR] Failed to load data from CSV: {e}")
+
+    app.config["DATA_SOURCE"] = "None"
+    return pd.DataFrame()
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -202,6 +228,40 @@ def locations_page():
 
 
 # ─────────────────────────────────────────────────────────
+# System & Health Endpoints
+# ─────────────────────────────────────────────────────────
+
+@app.route("/api/health")
+def api_health():
+    """Health check endpoint checking IBM DB2 connection and cached records."""
+    db_ok, db_info = db.check_connection()
+    df = get_df()
+    return jsonify({
+        "status": "ok",
+        "database": {
+            "connected": db_ok,
+            "info": db_info
+        },
+        "data_source": app.config.get("DATA_SOURCE", "Unknown"),
+        "total_jobs_loaded": len(df)
+    })
+
+
+@app.route("/api/reload", methods=["POST", "GET"])
+def api_reload():
+    """Force reload data from IBM DB2 database into memory."""
+    global DF
+    prefer_db = request.args.get("prefer_db", "true").lower() in ("true", "1", "yes")
+    raw = load_data(prefer_db=prefer_db)
+    DF = clean_data(raw)
+    return jsonify({
+        "success": True,
+        "message": f"Successfully reloaded {len(DF)} jobs.",
+        "data_source": app.config.get("DATA_SOURCE", "Unknown")
+    })
+
+
+# ─────────────────────────────────────────────────────────
 # API: Dashboard
 # ─────────────────────────────────────────────────────────
 
@@ -214,7 +274,8 @@ def api_dashboard():
             return jsonify({"success": True, "data": {
                 "total_jobs": 0, "total_companies": 0,
                 "median_salary": None, "average_salary": None,
-                "highest_salary": None, "new_jobs": 0, "remote_jobs": 0
+                "highest_salary": None, "new_jobs": 0, "remote_jobs": 0,
+                "job_trend": []
             }})
 
         salary_series = df["salary_mid"].dropna()
@@ -227,20 +288,53 @@ def api_dashboard():
         highest_salary = safe_value(salary_series.max())
         remote_jobs = int(df["remote"].sum()) if "remote" in df.columns else 0
 
-        # Jobs posted in the last 7 days
+        # Jobs posted in the last 30 days
         new_jobs = 0
         if "posted_date" in df.columns:
             cutoff = pd.Timestamp.now() - pd.Timedelta(days=30)
             new_jobs = int(df["posted_date"].dropna().gt(cutoff).sum())
 
-        # Job trend: last 30 days by date
+        # Job trend with range filter
         trend = []
+        trend_range = request.args.get("trend_range", "1m").strip().lower()
+
         if "posted_date" in df.columns:
             df_trend = df.dropna(subset=["posted_date"]).copy()
-            df_trend["date_str"] = df_trend["posted_date"].dt.strftime("%Y-%m-%d")
-            trend_series = df_trend.groupby("date_str").size().reset_index(name="count")
-            trend_series = trend_series.sort_values("date_str")
-            trend = trend_series.to_dict(orient="records")
+            if not df_trend.empty:
+                max_date = df_trend["posted_date"].max()
+                
+                # Filter date by trend_range relative to max_date in data or now
+                if trend_range == "1w":
+                    start_date = max_date - pd.Timedelta(days=7)
+                    df_trend = df_trend[df_trend["posted_date"] >= start_date]
+                elif trend_range == "1m":
+                    start_date = max_date - pd.Timedelta(days=30)
+                    df_trend = df_trend[df_trend["posted_date"] >= start_date]
+                elif trend_range == "1y":
+                    start_date = max_date - pd.Timedelta(days=365)
+                    df_trend = df_trend[df_trend["posted_date"] >= start_date]
+                elif trend_range == "3y":
+                    start_date = max_date - pd.Timedelta(days=365 * 3)
+                    df_trend = df_trend[df_trend["posted_date"] >= start_date]
+                elif trend_range == "5y":
+                    start_date = max_date - pd.Timedelta(days=365 * 5)
+                    df_trend = df_trend[df_trend["posted_date"] >= start_date]
+                # 'all' does not filter start_date
+
+                if not df_trend.empty:
+                    # Decide aggregation level based on range
+                    if trend_range in ("1y", "3y", "5y", "all") and (df_trend["posted_date"].max() - df_trend["posted_date"].min()).days > 90:
+                        # Group by month if span is large
+                        df_trend["date_str"] = df_trend["posted_date"].dt.strftime("%Y-%m")
+                        trend_series = df_trend.groupby("date_str").size().reset_index(name="count")
+                        trend_series = trend_series.sort_values("date_str")
+                        trend = trend_series.to_dict(orient="records")
+                    else:
+                        # Group by day
+                        df_trend["date_str"] = df_trend["posted_date"].dt.strftime("%Y-%m-%d")
+                        trend_series = df_trend.groupby("date_str").size().reset_index(name="count")
+                        trend_series = trend_series.sort_values("date_str")
+                        trend = trend_series.to_dict(orient="records")
 
         return jsonify({
             "success": True,
@@ -670,4 +764,10 @@ def server_error(e):
 # ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    print("\n" + "=" * 55)
+    print("  🇻🇳 VIETNAM DATA ENGINEER JOB MARKET")
+    print(f"  Data Source : {app.config.get('DATA_SOURCE', 'IBM DB2 Cloud')}")
+    print(f"  Total Jobs  : {len(DF)} records")
+    print("  Server      : http://127.0.0.1:5000")
+    print("=" * 55 + "\n")
     app.run(debug=True)

@@ -1,15 +1,44 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tìm Việc Làm Data Engineer - Vietnam DE Job Market</title>
   <meta name="description" content="Tìm kiếm và lọc cơ hội việc làm Data Engineer theo địa điểm, mức lương, kinh nghiệm và kỹ năng.">
   
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#0f1117',
+              surface: '#1a1d27',
+              card: '#1e2130',
+              'card-hover': '#252840',
+              border: '#2a2d3e',
+              'border-light': '#353850',
+              primary: '#6c8ef5',
+              'primary-dark': '#5470d4',
+              secondary: '#7c5cbf',
+              accent: '#38bdf8',
+              success: '#34d399',
+              warning: '#fbbf24',
+              danger: '#f87171',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="/static/css/jobs.css">
 </head>
-<body>
+<body class="bg-[#0f1117] text-slate-200 antialiased">
 
   <!-- Mobile Overlay -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>

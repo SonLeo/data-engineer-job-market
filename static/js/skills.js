@@ -56,7 +56,8 @@ function renderTopSkillsChart(skills) {
   createBarChart('topSkillsBarChart', labels, data, {
     datasetLabel: 'Số tin tuyển dụng',
     backgroundColor: '#6c8ef5',
-    tooltipCallback: (ctx) => ` ${ctx.raw} tin tuyển dụng yêu cầu (${top12[ctx.dataIndex].percentage}%)`
+    tooltipCallback: (ctx) => ` ${ctx.raw} tin tuyển dụng yêu cầu (${top12[ctx.dataIndex].percentage}%)`,
+    dataLabelFormatter: (val) => val > 0 ? `${val}` : ''
   });
 }
 
@@ -67,7 +68,8 @@ function renderSkillShareChart(skills) {
   const data = top6.map(s => s.percentage);
 
   createDoughnutChart('skillsShareChart', labels, data, {
-    colors: ['#6c8ef5', '#38bdf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa']
+    colors: ['#6c8ef5', '#38bdf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'],
+    dataLabelFormatter: (val) => `${val}%`
   });
 }
 

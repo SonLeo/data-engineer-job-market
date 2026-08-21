@@ -21,7 +21,7 @@ async function loadLocationAnalytics() {
     renderLocationKPIs(data.locations);
     renderLocationJobChart(data.locations);
     renderLocationSalaryChart(data.locations);
-    renderLocationTable(data.locations);
+    renderLocationTableAndCards(data.locations);
 
   } catch (err) {
     console.error('Error loading location analytics:', err);
@@ -56,7 +56,8 @@ function renderLocationJobChart(locations) {
   createBarChart('locJobCountChart', labels, data, {
     datasetLabel: 'Số tin tuyển dụng',
     backgroundColor: '#6c8ef5',
-    tooltipCallback: (ctx) => ` ${ctx.raw} việc làm (${locations[ctx.dataIndex].percentage}%)`
+    tooltipCallback: (ctx) => ` ${ctx.raw} việc làm (${locations[ctx.dataIndex].percentage}%)`,
+    dataLabelFormatter: (val) => val > 0 ? `${val}` : ''
   });
 }
 
@@ -69,44 +70,95 @@ function renderLocationSalaryChart(locations) {
   createBarChart('locSalaryChart', labels, data, {
     datasetLabel: 'Lương trung bình (Triệu ₫)',
     backgroundColor: '#34d399',
-    tooltipCallback: (ctx) => ` Lương trung bình: ${ctx.raw}M ₫/tháng`
+    tooltipCallback: (ctx) => ` Lương trung bình: ${ctx.raw}M ₫/tháng`,
+    dataLabelFormatter: (val) => val > 0 ? `${val}M` : ''
   });
 }
 
-function renderLocationTable(locations) {
+function renderLocationTableAndCards(locations) {
   const tbody = document.getElementById('locationTableBody');
-  if (!tbody) return;
+  const mobileContainer = document.getElementById('locationMobileSlider');
 
   if (!locations || locations.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 2rem;">Chưa có dữ liệu địa điểm.</td></tr>';
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 2rem;">Chưa có dữ liệu địa điểm.</td></tr>';
+    }
+    if (mobileContainer) {
+      mobileContainer.innerHTML = '<div class="text-center text-muted p-4">Chưa có dữ liệu địa điểm.</div>';
+    }
     return;
   }
 
-  tbody.innerHTML = locations.map((loc, index) => {
-    const avgSal = loc.average_salary ? formatCurrency(loc.average_salary) : 'Thoả thuận';
-    const medSal = loc.median_salary ? formatCurrency(loc.median_salary) : 'Thoả thuận';
-    const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
+  // 1. Render Desktop Table
+  if (tbody) {
+    tbody.innerHTML = locations.map((loc, index) => {
+      const avgSal = loc.average_salary ? formatCurrency(loc.average_salary) : 'Thoả thuận';
+      const medSal = loc.median_salary ? formatCurrency(loc.median_salary) : 'Thoả thuận';
+      const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
 
-    return `
-      <tr>
-        <td>
-          <span class="rank-badge ${rankClass}" style="margin-right: 8px;">#${index + 1}</span>
-          <strong style="color: var(--color-text);">${escapeHtml(loc.location)}</strong>
-        </td>
-        <td><span class="badge badge-primary">${formatNumber(loc.job_count)} tin</span></td>
-        <td>
-          <div class="table-bar-container">
-            <div class="table-bar-bg">
-              <div class="table-bar-fill" style="width: ${Math.min(100, loc.percentage)}%;"></div>
+      return `
+        <tr>
+          <td>
+            <span class="rank-badge ${rankClass}" style="margin-right: 8px;">#${index + 1}</span>
+            <strong style="color: var(--color-text);">${escapeHtml(loc.location)}</strong>
+          </td>
+          <td><span class="badge badge-primary">${formatNumber(loc.job_count)} tin</span></td>
+          <td>
+            <div class="table-bar-container">
+              <div class="table-bar-bg">
+                <div class="table-bar-fill" style="width: ${Math.min(100, loc.percentage)}%;"></div>
+              </div>
+              <span class="table-bar-text">${loc.percentage}%</span>
             </div>
-            <span class="table-bar-text">${loc.percentage}%</span>
+          </td>
+          <td class="font-medium text-success">${avgSal}</td>
+          <td class="font-medium">${medSal}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // 2. Render Mobile Swipeable Cards Slider
+  if (mobileContainer) {
+    mobileContainer.innerHTML = locations.map((loc, index) => {
+      const avgSal = loc.average_salary ? formatCurrencyCompact(loc.average_salary) : 'Thoả thuận';
+      const medSal = loc.median_salary ? formatCurrencyCompact(loc.median_salary) : 'Thoả thuận';
+      const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
+
+      return `
+        <div class="mobile-slide-card">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="rank-badge ${rankClass}">#${index + 1}</span>
+              <span class="font-bold text-sm text-slate-100">${escapeHtml(loc.location)}</span>
+            </div>
+            <span class="badge badge-primary text-xs font-semibold">${formatNumber(loc.job_count)} tin</span>
           </div>
-        </td>
-        <td class="font-medium text-success">${avgSal}</td>
-        <td class="font-medium">${medSal}</td>
-      </tr>
-    `;
-  }).join('');
+
+          <div class="mt-1">
+            <div class="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Tỷ trọng thị trường</span>
+              <span class="font-semibold text-sky-400">${loc.percentage}%</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-blue-500 to-sky-400 rounded-full" style="width: ${Math.min(100, loc.percentage)}%;"></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/50 text-xs">
+            <div>
+              <div class="text-slate-400 text-[11px]">Lương TB</div>
+              <div class="font-semibold text-emerald-400">${avgSal}</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-[11px]">Lương TV</div>
+              <div class="font-semibold text-slate-200">${medSal}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 }
 
 function escapeHtml(str) {

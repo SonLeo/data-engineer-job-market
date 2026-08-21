@@ -77,7 +77,7 @@ def test_page_routes(client):
 # ─────────────────────────────────────────────────────────
 
 def test_api_dashboard(client):
-    """Test GET /api/dashboard."""
+    """Test GET /api/dashboard with default and custom trend_range."""
     response = client.get("/api/dashboard")
     assert response.status_code == 200
     data = response.get_json()
@@ -93,6 +93,14 @@ def test_api_dashboard(client):
     assert "remote_jobs" in d
     assert "job_trend" in d
     assert d["total_jobs"] > 0
+
+    # Test trend ranges
+    for r in ["1w", "1m", "1y", "3y", "5y", "all"]:
+        res_r = client.get(f"/api/dashboard?trend_range={r}")
+        assert res_r.status_code == 200
+        data_r = res_r.get_json()
+        assert data_r["success"] is True
+        assert isinstance(data_r["data"]["job_trend"], list)
 
 
 def test_api_jobs_pagination(client):
@@ -197,3 +205,24 @@ def test_api_location_analytics(client):
     assert "location" in d["locations"][0]
     assert "job_count" in d["locations"][0]
     assert "percentage" in d["locations"][0]
+
+
+def test_api_health(client):
+    """Test GET /api/health."""
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "ok"
+    assert "database" in data
+    assert "total_jobs_loaded" in data
+    assert data["total_jobs_loaded"] > 0
+
+
+def test_api_reload(client):
+    """Test POST /api/reload."""
+    response = client.post("/api/reload")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert "Successfully reloaded" in data["message"]
+
