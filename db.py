@@ -70,12 +70,12 @@ def get_db2_config() -> Dict[str, Any]:
                 logger.error(f"Failed to parse fallback data.json: {e}")
 
     return {
-        "database": database or "bludb",
-        "hostname": hostname or "1bbf73c5-d84a-4bb0-85b9-ab1a4348f4a4.c3n41cmd0nqnrk39u98g.databases.appdomain.cloud",
-        "port": str(port or "32286"),
+        "database": database,
+        "hostname": hostname,
+        "port": port,
         "protocol": protocol,
-        "uid": uid or "mgy69782",
-        "pwd": pwd or "unHJxrdF4DgNCbCP",
+        "uid": uid,
+        "pwd": pwd,
         "security": security
     }
 
@@ -175,9 +175,9 @@ def init_db(drop_existing: bool = False) -> bool:
         ibm_db.close(conn)
 
 
-def import_csv_to_db(csv_path: Optional[str] = None) -> int:
+def import_csv_to_db(csv_path: Optional[str] = None, truncate_first: bool = True, batch_size: int = 200) -> int:
     """
-    Read data from CSV and insert/upsert into IBM DB2 jobs table.
+    Read data from CSV and insert into IBM DB2 jobs table using high-speed multi-row batches.
     Returns the count of records processed.
     """
     if csv_path is None:
@@ -200,37 +200,24 @@ def import_csv_to_db(csv_path: Optional[str] = None) -> int:
     init_db(drop_existing=False)
 
     conn = get_db_connection()
-    inserted_count = 0
-    updated_count = 0
-
     try:
-        # Check existing job_ids
-        existing_ids = set()
-        stmt = ibm_db.exec_immediate(conn, "SELECT job_id FROM jobs")
-        row = ibm_db.fetch_assoc(stmt)
-        while row:
-            existing_ids.add(str(row["JOB_ID"]).strip())
-            row = ibm_db.fetch_assoc(stmt)
+        # Turn off autocommit for transactional performance
+        try:
+            ibm_db.autocommit(conn, ibm_db.SQL_AUTOCOMMIT_OFF)
+        except Exception as e:
+            logger.warning(f"Could not disable autocommit: {e}")
 
-        insert_sql = """
-            INSERT INTO jobs (
-                job_id, title, company, location, salary_min, salary_max, salary_currency,
-                experience_min, experience_max, employment_type, remote, description,
-                skills, source, url, posted_date, scraped_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        insert_stmt = ibm_db.prepare(conn, insert_sql)
+        if truncate_first:
+            logger.info("Clearing existing records from jobs table...")
+            try:
+                ibm_db.exec_immediate(conn, "DELETE FROM jobs")
+                ibm_db.commit(conn)
+                logger.info("Cleared existing records.")
+            except Exception as e:
+                logger.warning(f"Notice on deleting existing rows: {e}")
 
-        update_sql = """
-            UPDATE jobs SET
-                title = ?, company = ?, location = ?, salary_min = ?, salary_max = ?,
-                salary_currency = ?, experience_min = ?, experience_max = ?,
-                employment_type = ?, remote = ?, description = ?, skills = ?,
-                source = ?, url = ?, posted_date = ?, scraped_at = ?
-            WHERE job_id = ?
-        """
-        update_stmt = ibm_db.prepare(conn, update_sql)
-
+        # Parse rows
+        rows_to_insert = []
         for _, row in df.iterrows():
             job_id = str(row.get("job_id", "")).strip()
             if not job_id:
@@ -272,29 +259,62 @@ def import_csv_to_db(csv_path: Optional[str] = None) -> int:
             posted_date = parse_date_str(row.get("posted_date"))
             scraped_at = parse_date_str(row.get("scraped_at"))
 
-            if job_id in existing_ids:
-                params = (
-                    title, company, location, salary_min, salary_max,
-                    salary_currency, exp_min, exp_max, employment_type,
-                    remote_val, description, skills, source, url,
-                    posted_date, scraped_at, job_id
-                )
-                ibm_db.execute(update_stmt, params)
-                updated_count += 1
-            else:
-                params = (
-                    job_id, title, company, location, salary_min, salary_max,
-                    salary_currency, exp_min, exp_max, employment_type,
-                    remote_val, description, skills, source, url,
-                    posted_date, scraped_at
-                )
-                ibm_db.execute(insert_stmt, params)
-                existing_ids.add(job_id)
-                inserted_count += 1
+            rows_to_insert.append((
+                job_id, title, company, location, salary_min, salary_max,
+                salary_currency, exp_min, exp_max, employment_type,
+                remote_val, description, skills, source, url,
+                posted_date, scraped_at
+            ))
 
-        logger.info(f"Migration completed: {inserted_count} inserted, {updated_count} updated.")
-        return inserted_count + updated_count
+        total_rows = len(rows_to_insert)
+        logger.info(f"Inserting {total_rows} records in batches of {batch_size}...")
+
+        inserted_count = 0
+        cols_count = 17
+        row_placeholder = f"({', '.join(['?'] * cols_count)})"
+
+        for idx in range(0, total_rows, batch_size):
+            chunk = rows_to_insert[idx : idx + batch_size]
+            current_batch_size = len(chunk)
+
+            # Build multi-row INSERT statement
+            placeholders = ", ".join([row_placeholder] * current_batch_size)
+            batch_sql = f"""
+                INSERT INTO jobs (
+                    job_id, title, company, location, salary_min, salary_max, salary_currency,
+                    experience_min, experience_max, employment_type, remote, description,
+                    skills, source, url, posted_date, scraped_at
+                ) VALUES {placeholders}
+            """
+            flat_params = [val for item in chunk for val in item]
+            
+            try:
+                stmt = ibm_db.prepare(conn, batch_sql)
+                ibm_db.execute(stmt, tuple(flat_params))
+                ibm_db.commit(conn)
+                inserted_count += current_batch_size
+                if inserted_count % 1000 == 0 or inserted_count == total_rows:
+                    logger.info(f"Progress: {inserted_count}/{total_rows} records inserted into IBM DB2 ({inserted_count*100//total_rows}%).")
+            except Exception as e:
+                logger.error(f"Failed inserting batch starting at index {idx}: {e}")
+                # Fallback to single inserts for this batch
+                single_sql = f"INSERT INTO jobs (job_id, title, company, location, salary_min, salary_max, salary_currency, experience_min, experience_max, employment_type, remote, description, skills, source, url, posted_date, scraped_at) VALUES {row_placeholder}"
+                single_stmt = ibm_db.prepare(conn, single_sql)
+                for single_item in chunk:
+                    try:
+                        ibm_db.execute(single_stmt, single_item)
+                        inserted_count += 1
+                    except Exception as ex:
+                        logger.warning(f"Single insert failed for {single_item[0]}: {ex}")
+                ibm_db.commit(conn)
+
+        logger.info(f"Batch ingestion completed: {inserted_count}/{total_rows} records inserted.")
+        return inserted_count
     finally:
+        try:
+            ibm_db.autocommit(conn, ibm_db.SQL_AUTOCOMMIT_ON)
+        except Exception:
+            pass
         ibm_db.close(conn)
 
 
