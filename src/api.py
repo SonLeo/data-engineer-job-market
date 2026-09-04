@@ -11,7 +11,10 @@ import pandas as pd
 import numpy as np
 from flask import Flask, jsonify, request, render_template
 
-import db
+try:
+    from . import db
+except ImportError:
+    import db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -20,10 +23,14 @@ logger = logging.getLogger(__name__)
 # App Setup
 # ─────────────────────────────────────────────────────────
 
-app = Flask(__name__)
-
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "jobs.csv"
+
+app = Flask(
+    __name__,
+    template_folder=str(BASE_DIR / "templates"),
+    static_folder=str(BASE_DIR / "static"),
+)
 
 # ─────────────────────────────────────────────────────────
 # Data Loading & Cleaning

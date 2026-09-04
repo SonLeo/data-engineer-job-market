@@ -9,7 +9,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_FILE = BASE_DIR / "data" / "jobs.csv"
 
 # Seed for reproducible realistic data
